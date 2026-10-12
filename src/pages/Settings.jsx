@@ -16,7 +16,7 @@ function Toggle({ id, label, hint, checked, onChange }) {
 }
 
 export default function Settings() {
-  const { displayName, setDisplayName, prefs, setPrefs, notify } = useApp()
+  const { displayName, setDisplayName, prefs, setPrefs, notify, resetData } = useApp()
   const [name, setName] = useState(displayName)
   const [error, setError] = useState('')
 
@@ -32,6 +32,13 @@ export default function Settings() {
   }
 
   const setPref = (k) => (val) => setPrefs((p) => ({ ...p, [k]: val }))
+
+  const reset = () => {
+    if (!window.confirm(t.settings.resetConfirm)) return
+    setName(resetData())
+    setError('')
+    notify(t.settings.resetDone)
+  }
 
   return (
     <>
@@ -85,6 +92,12 @@ export default function Settings() {
             <Toggle id="compact" label={t.settings.compact} hint={t.settings.compactHint} checked={prefs.compact} onChange={setPref('compact')} />
             <Toggle id="animation" label={t.settings.animation} hint={t.settings.animationHint} checked={prefs.animation} onChange={setPref('animation')} />
           </div>
+        </section>
+
+        <section className="card lg:col-span-2" aria-labelledby="data-title">
+          <h2 id="data-title" className="mb-2 text-lg font-semibold text-navy-900">{t.settings.data}</h2>
+          <p className="mb-4 text-sm leading-relaxed text-slate-500">{t.settings.dataHint}</p>
+          <button type="button" className="btn btn-secondary" onClick={reset}>{t.settings.reset}</button>
         </section>
       </div>
     </>

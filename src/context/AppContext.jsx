@@ -4,12 +4,35 @@ import { initialActivities, initialAthletes } from '../data/athletes.js'
 
 const AppContext = createContext(null)
 
+const STORAGE_KEY = 'sportsai:v1'
+const DEFAULT_NAME = 'ડેમો કોચ'
+const DEFAULT_PREFS = { largeFont: false, compact: false, animation: true }
+
+// localStorage can throw (private mode, blocked storage) or hold bad data; fall back to demo data.
+function loadSaved() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    return saved && typeof saved === 'object' ? saved : {}
+  } catch {
+    return {}
+  }
+}
+
 export function AppProvider({ children }) {
-  const [athletes, setAthletes] = useState(initialAthletes)
-  const [activities, setActivities] = useState(initialActivities)
-  const [displayName, setDisplayName] = useState('ડેમો કોચ')
-  const [prefs, setPrefs] = useState({ largeFont: false, compact: false, animation: true })
+  const [saved] = useState(loadSaved)
+  const [athletes, setAthletes] = useState(Array.isArray(saved.athletes) ? saved.athletes : initialAthletes)
+  const [activities, setActivities] = useState(Array.isArray(saved.activities) ? saved.activities : initialActivities)
+  const [displayName, setDisplayName] = useState(typeof saved.displayName === 'string' ? saved.displayName : DEFAULT_NAME)
+  const [prefs, setPrefs] = useState({ ...DEFAULT_PREFS, ...saved.prefs })
   const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ athletes, activities, displayName, prefs }))
+    } catch {
+      // storage unavailable: the app keeps working with in-memory state
+    }
+  }, [athletes, activities, displayName, prefs])
 
   useEffect(() => {
     document.documentElement.classList.toggle('font-large', prefs.largeFont)
@@ -40,9 +63,18 @@ export function AppProvider({ children }) {
     [logActivity],
   )
 
+  // Restores the sample data; returns the default display name so forms can resync.
+  const resetData = useCallback(() => {
+    setAthletes(initialAthletes)
+    setActivities(initialActivities)
+    setDisplayName(DEFAULT_NAME)
+    setPrefs(DEFAULT_PREFS)
+    return DEFAULT_NAME
+  }, [])
+
   const value = useMemo(
-    () => ({ athletes, activities, displayName, setDisplayName, prefs, setPrefs, toast, notify, saveAthlete }),
-    [athletes, activities, displayName, prefs, toast, notify, saveAthlete],
+    () => ({ athletes, activities, displayName, setDisplayName, prefs, setPrefs, toast, notify, saveAthlete, resetData }),
+    [athletes, activities, displayName, prefs, toast, notify, saveAthlete, resetData],
   )
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
